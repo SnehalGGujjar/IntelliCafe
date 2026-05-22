@@ -6,7 +6,7 @@ from .models import Location
 
 # Simple base view (optional)
 def base(request):
-    return render(request, 'base.html')
+    return render(request, 'core/home.html')
 
 def about(request):
     return render(request, 'about/about.html')

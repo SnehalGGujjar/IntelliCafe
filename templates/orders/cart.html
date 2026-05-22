@@ -1,33 +1,178 @@
 {% extends 'base.html' %}
 {% block title %}Your Cart{% endblock %}
+
+{% block extra_head %}
+<style>
+  .cart-page { padding: 3rem 0 5rem; }
+  .page-heading {
+    font-family: 'Playfair Display', serif;
+    font-size: 2rem;
+    margin-bottom: 2rem;
+    color: var(--text-primary);
+  }
+  .page-heading span { color: var(--brand-amber); }
+
+  /* Cart table */
+  .cart-table-wrap {
+    background: var(--brand-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    box-shadow: var(--shadow-sm);
+  }
+  .cart-table { width: 100%; border-collapse: collapse; margin: 0; }
+  .cart-table thead tr {
+    background: linear-gradient(135deg, var(--brand-dark), var(--brand-mid));
+    color: rgba(255,255,255,.75);
+    font-size: .8rem;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+  }
+  .cart-table th { padding: .9rem 1.25rem; font-weight: 600; }
+  .cart-table td { padding: 1rem 1.25rem; vertical-align: middle; border-top: 1px solid var(--border-color); }
+  .cart-table tr:hover td { background: rgba(201,125,46,.03); }
+  .item-name  { font-weight: 600; color: var(--text-primary); }
+  .item-price { color: var(--text-muted); font-size: .9rem; }
+  .subtotal   { font-weight: 700; color: var(--brand-amber); font-size: 1rem; }
+
+  /* Sidebar card */
+  .cart-sidebar {
+    background: var(--brand-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: 1.75rem;
+    box-shadow: var(--shadow-sm);
+    position: sticky;
+    top: 90px;
+  }
+  .sidebar-title { font-family: 'Playfair Display', serif; font-size: 1.3rem; margin-bottom: 1.5rem; }
+  .total-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 0;
+    border-top: 2px solid var(--border-color);
+    margin-top: .5rem;
+  }
+  .total-label { font-weight: 600; color: var(--text-secondary); }
+  .total-amount {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: var(--brand-amber);
+  }
+  .form-control-brew {
+    border: 1.5px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    padding: .6rem .9rem;
+    font-size: .9rem;
+    transition: var(--transition);
+    width: 100%;
+    outline: none;
+  }
+  .form-control-brew:focus {
+    border-color: var(--brand-amber);
+    box-shadow: 0 0 0 3px rgba(201,125,46,.15);
+  }
+  .empty-cart {
+    text-align: center;
+    padding: 3rem 1.5rem;
+    color: var(--text-muted);
+  }
+  .empty-cart i { font-size: 3rem; opacity: .3; margin-bottom: 1rem; display: block; }
+  .qty-badge {
+    background: rgba(201,125,46,.12);
+    color: var(--brand-amber);
+    padding: .15rem .5rem;
+    border-radius: 6px;
+    font-weight: 700;
+    font-size: .85rem;
+  }
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="row g-3">
-  <div class="col-lg-8">
-    <div class="ai-card">
-      <h4 class="mb-3">Cart</h4>
-      <table class="table">
-        <thead><tr><th>Item</th><th>Qty</th><th>Price</th><th>Subtotal</th></tr></thead>
-        <tbody>
-        {% for it in order.items.all %}
-          <tr><td>{{ it.item.name }}</td><td>{{ it.qty }}</td><td>₹ {{ it.unit_price }}</td><td>₹ {{ it.subtotal }}</td></tr>
-        {% empty %}
-          <tr><td colspan="4" class="text-center text-muted">No items yet. Go to <a href="{% url 'menu:today' %}">menu</a>.</td></tr>
-        {% endfor %}
-        </tbody>
-      </table>
-      <div class="text-end fs-5">Total: <strong>₹ {{ order.total }}</strong></div>
+<section class="cart-page">
+  <div class="container">
+    <h1 class="page-heading"><i class="fa-solid fa-cart-shopping me-2" style="color:var(--brand-amber)"></i>Your <span>Cart</span></h1>
+
+    <div class="row g-4">
+      <!-- Cart items -->
+      <div class="col-lg-8">
+        <div class="cart-table-wrap">
+          {% if order.items.all %}
+          <table class="cart-table">
+            <thead>
+              <tr>
+                <th><i class="fa-solid fa-utensils me-1"></i> Item</th>
+                <th>Qty</th>
+                <th>Unit Price</th>
+                <th>Subtotal</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for it in order.items.all %}
+              <tr>
+                <td><span class="item-name">{{ it.item.name }}</span></td>
+                <td><span class="qty-badge">× {{ it.qty }}</span></td>
+                <td><span class="item-price">₹ {{ it.unit_price }}</span></td>
+                <td><span class="subtotal">₹ {{ it.subtotal }}</span></td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+          {% else %}
+          <div class="empty-cart">
+            <i class="fa-solid fa-cart-shopping"></i>
+            <h5>Your cart is empty</h5>
+            <p>Head over to the menu to add some delicious items.</p>
+            <a href="{% url 'menu:today' %}" class="btn-brew btn mt-2">
+              <i class="fa-solid fa-utensils me-1"></i>Browse Menu
+            </a>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Sidebar -->
+      <div class="col-lg-4">
+        <div class="cart-sidebar">
+          <h3 class="sidebar-title">Order Summary</h3>
+
+          {% if order.items.all %}
+          <div class="total-row">
+            <span class="total-label">Total</span>
+            <span class="total-amount">₹ {{ order.total }}</span>
+          </div>
+
+          <form method="post" class="mt-4">
+            {% csrf_token %}
+            <label class="form-label fw-semibold mb-1" for="emailInput">
+              <i class="fa-solid fa-envelope me-1 text-brew"></i>Your Email
+            </label>
+            <input id="emailInput" class="form-control-brew mb-1"
+                   type="email" name="email"
+                   placeholder="you@example.com"
+                   value="{{ order.customer_email }}"
+                   required>
+            <div class="form-text mb-3" style="font-size:.78rem;color:var(--text-muted)">
+              We'll send your bill here after payment.
+            </div>
+            <button type="submit" class="btn-brew btn w-100">
+              <i class="fa-solid fa-arrow-right me-2"></i>Proceed to Payment
+            </button>
+          </form>
+          {% else %}
+          <p class="text-muted text-center mt-3" style="font-size:.9rem">Add items to place an order.</p>
+          {% endif %}
+
+          <hr style="border-color:var(--border-color);margin:1.5rem 0 1rem">
+          <a href="{% url 'menu:today' %}" class="btn-brew-outline btn w-100">
+            <i class="fa-solid fa-plus me-1"></i>Add More Items
+          </a>
+        </div>
+      </div>
     </div>
   </div>
-  <div class="col-lg-4">
-    <div class="ai-card">
-      <h5 class="mb-2">Enter your email</h5>
-      <form method="post">
-        {% csrf_token %}
-        <input class="form-control" type="email" name="email" placeholder="you@example.com" value="{{ order.customer_email }}">
-        <button class="btn btn-success mt-3 w-100">Proceed to Pay</button>
-      </form>
-      <p class="small text-muted mt-2">We will email the bill after payment confirmation.</p>
-    </div>
-  </div>
-</div>
+</section>
 {% endblock %}

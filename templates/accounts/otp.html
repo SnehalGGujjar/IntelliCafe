@@ -1,10 +1,186 @@
-{% extends "admin/base_site.html" %}
+{% extends 'base.html' %}
+{% block title %}OTP Verification{% endblock %}
+
+{% block extra_head %}
+<style>
+  .auth-page {
+    min-height: calc(100vh - 130px);
+    display: flex; align-items: center; justify-content: center;
+    padding: 3rem 1rem;
+    background: linear-gradient(135deg, var(--brand-dark) 0%, var(--brand-mid) 100%);
+  }
+  .auth-card {
+    background: var(--brand-card);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg);
+    width: 100%; max-width: 420px;
+    overflow: hidden;
+    animation: fadeInUp .4s ease both;
+  }
+  .auth-header {
+    background: linear-gradient(135deg, var(--brand-brown), var(--brand-amber));
+    padding: 2.5rem 2rem; text-align: center;
+  }
+  .auth-header-icon {
+    width: 64px; height: 64px;
+    background: rgba(255,255,255,.25); border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.75rem; color: #fff; margin: 0 auto 1rem;
+  }
+  .auth-header h2 { color: #fff; font-size: 1.6rem; margin-bottom: .3rem; }
+  .auth-header p  { color: rgba(255,255,255,.8); font-size: .88rem; margin: 0; }
+  .auth-body { padding: 2rem; }
+
+  /* 6-box OTP input */
+  .otp-inputs {
+    display: flex; gap: .6rem; justify-content: center; margin: 1.5rem 0;
+  }
+  .otp-box {
+    width: 48px; height: 56px;
+    text-align: center; font-size: 1.4rem; font-weight: 700;
+    border: 2px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    background: #fafafa;
+    outline: none; transition: var(--transition);
+    color: var(--text-primary);
+  }
+  .otp-box:focus {
+    border-color: var(--brand-amber);
+    box-shadow: 0 0 0 3px rgba(201,125,46,.15);
+    background: #fff;
+  }
+  .otp-box.filled { border-color: var(--brand-amber); background: rgba(201,125,46,.05); }
+
+  .otp-hint {
+    text-align: center; font-size: .83rem; color: var(--text-muted); margin-bottom: 1.5rem;
+  }
+  .otp-hint strong { color: var(--brand-amber); }
+  .auth-footer-links { margin-top: 1rem; text-align: center; font-size: .83rem; }
+  .auth-footer-links a { color: var(--brand-amber); text-decoration: none; }
+  .auth-footer-links a:hover { text-decoration: underline; }
+  .expiry-bar {
+    height: 4px; background: var(--border-color); border-radius: 2px; overflow: hidden; margin-bottom: 1.5rem;
+  }
+  .expiry-fill {
+    height: 100%; background: linear-gradient(90deg, var(--brand-amber), var(--brand-gold));
+    border-radius: 2px; transition: width 1s linear;
+  }
+</style>
+{% endblock %}
+
 {% block content %}
-<h1>OTP Verification</h1>
-<form method="post">{% csrf_token %}
-  <div><label>Enter the 6-digit code sent to your email</label>
-    <input type="text" name="code" class="vTextField">
+<section class="auth-page">
+  <div class="auth-card">
+    <div class="auth-header">
+      <div class="auth-header-icon"><i class="fa-solid fa-shield-halved"></i></div>
+      <h2>OTP Verification</h2>
+      <p>Enter the 6-digit code sent to your email</p>
+    </div>
+    <div class="auth-body">
+      {% if messages %}
+        {% for m in messages %}
+        <div class="alert alert-{{ m.tags }} mb-3">{{ m }}</div>
+        {% endfor %}
+      {% endif %}
+
+      <!-- Expiry bar (10 min = 600s) -->
+      <div class="expiry-bar"><div class="expiry-fill" id="expiryFill" style="width:100%"></div></div>
+
+      <p class="otp-hint">Code expires in <strong id="expiryTimer">10:00</strong></p>
+
+      <form method="post" id="otpForm">
+        {% csrf_token %}
+        <!-- Hidden real input that gets filled from boxes -->
+        <input type="hidden" name="code" id="otpHidden">
+
+        <div class="otp-inputs" id="otpBoxes">
+          <input type="text" class="otp-box" maxlength="1" inputmode="numeric" pattern="[0-9]" aria-label="Digit 1">
+          <input type="text" class="otp-box" maxlength="1" inputmode="numeric" pattern="[0-9]" aria-label="Digit 2">
+          <input type="text" class="otp-box" maxlength="1" inputmode="numeric" pattern="[0-9]" aria-label="Digit 3">
+          <input type="text" class="otp-box" maxlength="1" inputmode="numeric" pattern="[0-9]" aria-label="Digit 4">
+          <input type="text" class="otp-box" maxlength="1" inputmode="numeric" pattern="[0-9]" aria-label="Digit 5">
+          <input type="text" class="otp-box" maxlength="1" inputmode="numeric" pattern="[0-9]" aria-label="Digit 6">
+        </div>
+
+        <button type="submit" class="btn-brew btn w-100" id="verifyBtn">
+          <i class="fa-solid fa-shield-check me-2"></i>Verify OTP
+        </button>
+      </form>
+
+      <div class="auth-footer-links mt-3">
+        <a href="{% url 'accounts:login' %}"><i class="fa-solid fa-arrow-left me-1"></i>Back to Login</a>
+      </div>
+    </div>
   </div>
-  <button class="button">Verify</button>
-</form>
+</section>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  // ── OTP Box navigation ────────────────────────────────
+  const boxes = Array.from(document.querySelectorAll('.otp-box'));
+  const hidden = document.getElementById('otpHidden');
+
+  function updateHidden() {
+    hidden.value = boxes.map(b => b.value).join('');
+  }
+
+  boxes.forEach((box, i) => {
+    box.addEventListener('input', e => {
+      // allow only digits
+      box.value = box.value.replace(/\D/g, '').slice(-1);
+      box.classList.toggle('filled', box.value !== '');
+      updateHidden();
+      if (box.value && i < boxes.length - 1) boxes[i + 1].focus();
+    });
+    box.addEventListener('keydown', e => {
+      if (e.key === 'Backspace' && !box.value && i > 0) {
+        boxes[i - 1].focus();
+        boxes[i - 1].value = '';
+        boxes[i - 1].classList.remove('filled');
+        updateHidden();
+      }
+    });
+    box.addEventListener('paste', e => {
+      const data = (e.clipboardData || window.clipboardData).getData('text').replace(/\D/g, '').slice(0, 6);
+      data.split('').forEach((ch, j) => {
+        if (boxes[j]) { boxes[j].value = ch; boxes[j].classList.add('filled'); }
+      });
+      updateHidden();
+      const next = boxes[Math.min(data.length, 5)];
+      if (next) next.focus();
+      e.preventDefault();
+    });
+  });
+
+  // Auto-submit when all 6 filled
+  document.getElementById('otpForm').addEventListener('input', () => {
+    if (hidden.value.length === 6) {
+      document.getElementById('verifyBtn').click();
+    }
+  });
+
+  // Focus first box
+  boxes[0]?.focus();
+
+  // ── Expiry countdown (10 min) ─────────────────────────
+  let secondsLeft = 600;
+  const timerEl = document.getElementById('expiryTimer');
+  const fillEl  = document.getElementById('expiryFill');
+
+  const countdown = setInterval(() => {
+    secondsLeft--;
+    const m = Math.floor(secondsLeft / 60);
+    const s = secondsLeft % 60;
+    timerEl.textContent = `${m}:${s.toString().padStart(2, '0')}`;
+    fillEl.style.width = (secondsLeft / 600 * 100) + '%';
+    if (secondsLeft <= 60) fillEl.style.background = '#e74c3c';
+    if (secondsLeft <= 0) {
+      clearInterval(countdown);
+      timerEl.textContent = 'Expired';
+      document.getElementById('verifyBtn').disabled = true;
+      document.getElementById('verifyBtn').innerHTML = '<i class="fa-solid fa-clock me-2"></i>Code Expired';
+    }
+  }, 1000);
+</script>
 {% endblock %}

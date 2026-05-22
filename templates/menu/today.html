@@ -1,75 +1,306 @@
 {% extends 'base.html' %}
 {% block title %}Today's Menu{% endblock %}
+{% block meta_description %}Browse today's weather-smart menu at CafeBrew.{% endblock %}
+
+{% block extra_head %}
+<style>
+  .menu-hero {
+    background: linear-gradient(135deg, var(--brand-dark) 0%, var(--brand-mid) 100%);
+    padding: 3rem 0 2rem;
+    color: #fff;
+    position: relative;
+    overflow: hidden;
+  }
+  .menu-hero::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: radial-gradient(ellipse at 70% 50%, rgba(201,125,46,.15) 0%, transparent 60%);
+    pointer-events: none;
+  }
+  .weather-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: .5rem;
+    background: rgba(255,255,255,.1);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(255,255,255,.15);
+    color: #fff;
+    padding: .45rem 1.1rem;
+    border-radius: 30px;
+    font-size: .85rem;
+    font-weight: 500;
+  }
+  .weather-pill .cond-badge {
+    background: linear-gradient(135deg, var(--brand-amber), var(--brand-gold));
+    color: #fff;
+    padding: .15rem .6rem;
+    border-radius: 20px;
+    font-size: .72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+  }
+  .location-line {
+    color: rgba(255,255,255,.6);
+    font-size: .82rem;
+    margin-top: .5rem;
+  }
+
+  .menu-content { padding: 2.5rem 0 4rem; }
+
+  /* Category filters */
+  .category-tabs { display: flex; gap: .5rem; flex-wrap: wrap; margin-bottom: 2rem; }
+  .cat-tab {
+    background: var(--brand-card);
+    border: 1.5px solid var(--border-color);
+    color: var(--text-secondary);
+    padding: .4rem 1.1rem;
+    border-radius: 30px;
+    font-size: .85rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: var(--transition);
+    user-select: none;
+  }
+  .cat-tab:hover { border-color: var(--brand-amber); color: var(--brand-amber); }
+  .cat-tab.active {
+    background: linear-gradient(135deg, var(--brand-amber), var(--brand-gold));
+    border-color: transparent;
+    color: #fff;
+    box-shadow: 0 3px 10px rgba(200,125,46,.35);
+  }
+
+  /* Menu item cards */
+  .menu-card {
+    background: var(--brand-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    height: 100%;
+    transition: var(--transition);
+    animation: fadeInUp .35s ease both;
+  }
+  .menu-card:hover {
+    transform: translateY(-5px);
+    box-shadow: var(--shadow-lg);
+    border-color: rgba(201,125,46,.3);
+  }
+  .menu-card-img {
+    height: 160px;
+    background: linear-gradient(135deg, #f0e6d3, #e8d5bc);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 3.5rem;
+    position: relative;
+    overflow: hidden;
+  }
+  .menu-card-img::after {
+    content: '';
+    position: absolute; inset: 0;
+    background: linear-gradient(to bottom, transparent 60%, rgba(0,0,0,.05));
+  }
+  .category-ribbon {
+    position: absolute;
+    top: .75rem; right: .75rem;
+    padding: .2rem .65rem;
+    border-radius: 20px;
+    font-size: .7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .4px;
+    z-index: 1;
+  }
+  .ribbon-food    { background: #fff3e0; color: #e65100; }
+  .ribbon-drink   { background: #e3f2fd; color: #1565c0; }
+  .ribbon-dessert { background: #fce4ec; color: #880e4f; }
+
+  .menu-card-body { padding: 1.25rem 1.4rem 1.4rem; }
+  .menu-card-name {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: .35rem;
+    font-family: 'Playfair Display', serif;
+  }
+  .menu-card-desc {
+    font-size: .85rem;
+    color: var(--text-muted);
+    line-height: 1.5;
+    margin-bottom: 1rem;
+    min-height: 2.5em;
+  }
+  .menu-card-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: .75rem;
+  }
+  .price-tag {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--brand-amber);
+  }
+  .add-form { display: flex; gap: .4rem; align-items: center; }
+  .qty-input {
+    width: 52px;
+    text-align: center;
+    border: 1.5px solid var(--border-color);
+    border-radius: 8px;
+    padding: .35rem .4rem;
+    font-size: .9rem;
+    transition: var(--transition);
+  }
+  .qty-input:focus {
+    outline: none;
+    border-color: var(--brand-amber);
+    box-shadow: 0 0 0 3px rgba(201,125,46,.15);
+  }
+  .btn-add {
+    background: linear-gradient(135deg, var(--brand-amber), var(--brand-gold));
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: .4rem .9rem;
+    font-size: .85rem;
+    font-weight: 600;
+    transition: var(--transition);
+    cursor: pointer;
+    display: flex; align-items: center; gap: .35rem;
+  }
+  .btn-add:hover {
+    transform: scale(1.05);
+    box-shadow: 0 4px 12px rgba(200,125,46,.4);
+  }
+  .btn-add:active { transform: scale(.97); }
+
+  /* location GPS section */
+  .location-bar {
+    background: var(--brand-warm);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: 1rem 1.5rem;
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+  .location-bar .loc-info { flex: 1; min-width: 180px; }
+  .loc-title { font-weight: 600; font-size: .9rem; color: var(--text-primary); }
+  .loc-sub   { font-size: .78rem; color: var(--text-muted); }
+
+  /* empty state */
+  .empty-menu {
+    text-align: center;
+    padding: 4rem 2rem;
+    color: var(--text-muted);
+  }
+  .empty-menu i { font-size: 3rem; margin-bottom: 1rem; opacity: .4; }
+
+  /* condition → emoji map */
+  .cond-icon { font-size: 1.1rem; }
+</style>
+{% endblock %}
 
 {% block content %}
-<section class="menu-section py-5">
-  <div class="container">
 
-    <!-- Header Section -->
-    <div class="d-flex flex-column flex-md-row justify-content-between align-items-center mb-4 pb-3 border-bottom">
-      <div class="mb-3 mb-md-0 text-center text-md-start">
-        <h2 class="fw-bold mb-1" style="color: #5c4033;">Today's Menu</h2>
-        <div class="small text-muted">
-          Location: <strong class="text-primary">{{ location_name }}</strong><br>
-          <span class="text-secondary small">Lat: {{ lat }} | Lon: {{ lon }}</span>
+<!-- ╔══ MENU HERO ═══════════════════════════════════════════╗ -->
+<section class="menu-hero">
+  <div class="container">
+    <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
+      <div>
+        <h2 class="brand-font mb-2" style="color:#fff;font-size:2rem;">Today's Menu</h2>
+        <div class="weather-pill">
+          <span class="cond-icon">
+            {% if condition == 'hot' %}🌡️
+            {% elif condition == 'cold' %}🥶
+            {% elif condition == 'rain' %}🌧️
+            {% elif condition == 'clear' %}☀️
+            {% else %}🍽️
+            {% endif %}
+          </span>
+          <span class="cond-badge">{{ condition }}</span>
+          {% if weather.temperature %}
+            &nbsp;{{ weather.temperature|floatformat:1 }}°C
+          {% endif %}
+          {% if weather.precipitation %}
+            &nbsp;· {{ weather.precipitation|floatformat:1 }} mm
+          {% endif %}
+        </div>
+        <div class="location-line">
+          <i class="fa-solid fa-location-dot me-1"></i>{{ location_name }}
         </div>
       </div>
+      <a href="{% url 'orders:start' %}" class="btn-brew btn align-self-start align-self-md-center">
+        <i class="fa-solid fa-cart-shopping me-2"></i>View Cart
+      </a>
+    </div>
+  </div>
+</section>
+<!-- ╚═══════════════════════════════════════════════════════╝ -->
 
-      <div class="d-flex gap-2">
-        <a href="{% url 'orders:start' %}" class="btn btn-outline-success">
-          <i class="fa-solid fa-cart-shopping me-1"></i> Go to Cart
-        </a>
-        <!-- <button id="useLocBtn" class="btn btn-outline-primary">
-          <i class="fa-solid fa-location-crosshairs me-1"></i> Use my location
-        </button> -->
+<!-- ╔══ MENU BODY ════════════════════════════════════════════╗ -->
+<section class="menu-content">
+  <div class="container">
+
+    <!-- Location / GPS bar -->
+    <div class="location-bar">
+      <div class="loc-info">
+        <div class="loc-title"><i class="fa-solid fa-location-crosshairs me-1 text-brew"></i>Your Location</div>
+        <div class="loc-sub">{{ location_label }} — menu filtered for current conditions</div>
+      </div>
+      <div class="d-flex gap-2 flex-wrap">
+        <select id="citySelect" class="form-select form-select-sm" style="width: auto; border-color: var(--brand-amber); color: var(--brand-amber); cursor: pointer;" aria-label="Select City">
+          <option value="" selected disabled>Select City...</option>
+        </select>
+        <button id="useLocBtn" class="btn-brew-outline btn btn-sm">
+          <i class="fa-solid fa-location-dot me-1"></i>Use GPS Location
+        </button>
       </div>
     </div>
 
-    <!-- Weather Section -->
-    <div class="p-3 mb-4 rounded bg-light border" style="background-color: #f8f1e9;">
-      <small class="text-muted fw-semibold d-block">CURRENT CONDITIONS</small>
-      <h5 class="mb-0 fw-normal">
-        <span class="text-dark">{{ condition|upper }}</span>
-        {% if weather.temperature %}
-          <span class="mx-2 text-secondary">|</span>
-          <i class="fa-solid fa-thermometer-half me-1"></i> {{ weather.temperature|floatformat:1 }}°C
-        {% endif %}
-        {% if weather.precipitation %}
-          <span class="mx-2 text-secondary">|</span>
-          <i class="fa-solid fa-cloud-rain me-1"></i> {{ weather.precipitation|floatformat:1 }} mm
-        {% endif %}
-      </h5>
+    <!-- Category filter tabs -->
+    <div class="category-tabs" id="catTabs" role="tablist">
+      <button class="cat-tab active" data-cat="all">
+        <i class="fa-solid fa-border-all me-1"></i>All
+      </button>
+      <button class="cat-tab" data-cat="food">
+        <i class="fa-solid fa-burger me-1"></i>Food
+      </button>
+      <button class="cat-tab" data-cat="drink">
+        <i class="fa-solid fa-mug-hot me-1"></i>Drinks
+      </button>
+      <button class="cat-tab" data-cat="dessert">
+        <i class="fa-solid fa-ice-cream me-1"></i>Desserts
+      </button>
     </div>
 
-    <!-- Menu Items Section -->
-    <h4 class="mb-4 pt-3 border-top text-center" style="color: #5c4033;">Available Items</h4>
-    <div class="row g-4">
+    <!-- Item grid -->
+    <div class="row g-4" id="menuGrid">
       {% for item in items %}
-      <div class="col-12 col-md-6 col-lg-4">
-        <div class="card h-100 shadow-sm border-0" style="background-color: #fff; border-radius: 10px;">
-          <div class="card-body p-4">
-            <div class="d-flex justify-content-between align-items-start mb-2">
-              <h5 class="fw-bold mb-0" style="color: #5c4033;">{{ item.name }}</h5>
-              <span class="badge bg-primary-subtle text-primary border ms-2 py-2 px-3 fw-semibold rounded-pill">
-                {{ item.get_category_display }}
-              </span>
-            </div>
-            {% if item.rules.all %}
-            <div class="mb-2 small text-muted">
-              <span class="fw-bold text-secondary me-1">Allowed for:</span>
-              {% for r in item.rules.all %}
-                <span class="badge bg-secondary text-white me-1">{{ r.get_condition_display }}</span>
-              {% endfor %}
-            </div>
+      <div class="col-12 col-sm-6 col-lg-4 menu-item-col" data-cat="{{ item.category }}">
+        <div class="menu-card">
+          <div class="menu-card-img" {% if item.image_url %}style="background-image: url('{{ item.image_url }}'); background-size: cover; background-position: center; color: transparent;"{% endif %}>
+            {% if not item.image_url %}
+              {% if item.category == 'food' %}🍽️{% elif item.category == 'drink' %}☕{% else %}🍰{% endif %}
             {% endif %}
-            <p class="text-muted small mb-3">{{ item.description|default:"No description provided." }}</p>
-            <div class="d-flex justify-content-between align-items-center mt-3">
-              <div class="h4 fw-bolder mb-0" style="color: #d4a373;">₹ {{ item.price }}</div>
-              <form method="post" action="{% url 'orders:add_to_cart' item.id %}" class="d-flex gap-2">
+            <span class="category-ribbon
+              {% if item.category == 'food' %}ribbon-food
+              {% elif item.category == 'drink' %}ribbon-drink
+              {% else %}ribbon-dessert{% endif %}">
+              {{ item.get_category_display }}
+            </span>
+          </div>
+          <div class="menu-card-body">
+            <div class="menu-card-name">{{ item.name }}</div>
+            <div class="menu-card-desc">{{ item.description|default:"No description." }}</div>
+            <div class="menu-card-footer">
+              <div class="price-tag">₹{{ item.price }}</div>
+              <form class="add-form" method="post" action="{% url 'orders:add_to_cart' item.id %}">
                 {% csrf_token %}
-                <input type="number" name="qty" class="form-control form-control-sm" value="1" min="1" style="max-width: 80px;">
-                <button class="btn btn-sm btn-primary shadow-sm" style="background-color: #d4a373; border-color: #d4a373;">
-                  <i class="fa-solid fa-cart-plus me-1"></i> Add
+                <input type="number" name="qty" class="qty-input" value="1" min="1" max="20" aria-label="Quantity">
+                <button type="submit" class="btn-add">
+                  <i class="fa-solid fa-cart-plus"></i> Add
                 </button>
               </form>
             </div>
@@ -78,8 +309,10 @@
       </div>
       {% empty %}
       <div class="col-12">
-        <div class="alert alert-warning text-center" style="background-color: #fff3cd; color: #856404;">
-          <i class="fa-solid fa-triangle-exclamation me-2"></i> No items available right now.
+        <div class="empty-menu">
+          <i class="fa-solid fa-utensils"></i>
+          <h5>No items available right now</h5>
+          <p>Check back later or ask a staff member.</p>
         </div>
       </div>
       {% endfor %}
@@ -87,23 +320,122 @@
 
   </div>
 </section>
+<!-- ╚═══════════════════════════════════════════════════════╝ -->
 
+{% endblock %}
+
+{% block extra_scripts %}
 <script>
-  // Same location logic from previous version (detect or manual select)
-  document.getElementById('useLocBtn')?.addEventListener('click', () => {
-    if (!navigator.geolocation){ alert('Geolocation not supported'); return; }
-    navigator.geolocation.getCurrentPosition(pos => {
-      const lat = pos.coords.latitude, lon = pos.coords.longitude;
-      const form = new FormData(); form.append('lat', lat); form.append('lon', lon);
-      fetch('/core/set-location/', { method: 'POST', headers: { 'X-CSRFToken': getCsrf() }, body: form })
-        .then(r => r.json()).then(j => { if (j.ok){ location.reload(); } else { alert('Failed: ' + (j.error||'unknown')); }} )
-        .catch(e => alert('Network error: ' + e));
-    }, err => alert('Location error: ' + err.message), { enableHighAccuracy: true, timeout: 8000 });
+  // ── Category filter tabs ──────────────────────────────
+  document.querySelectorAll('.cat-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.cat-tab').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      const cat = tab.dataset.cat;
+      document.querySelectorAll('.menu-item-col').forEach(col => {
+        const show = cat === 'all' || col.dataset.cat === cat;
+        col.style.display = show ? '' : 'none';
+      });
+    });
   });
 
-  function getCsrf(){
-    const m = document.cookie.match(/(?:^|;)\s*csrftoken=([^;]+)/);
-    return m ? decodeURIComponent(m[1]) : '';
+  // ── GPS Location ─────────────────────────────────────
+  const locBtn = document.getElementById('useLocBtn');
+  if (locBtn) {
+    locBtn.addEventListener('click', () => {
+      if (!navigator.geolocation) {
+        alert('Geolocation is not supported by your browser.');
+        return;
+      }
+      locBtn.disabled = true;
+      locBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i>Getting location…';
+      navigator.geolocation.getCurrentPosition(
+        pos => {
+          const lat = pos.coords.latitude, lon = pos.coords.longitude;
+          const fd = new FormData();
+          fd.append('lat', lat);
+          fd.append('lon', lon);
+          fd.append('label', `GPS (${lat.toFixed(4)}, ${lon.toFixed(4)})`);
+          fetch('/core/set-location/', {
+            method: 'POST',
+            headers: { 'X-CSRFToken': getCsrf() },
+            body: fd
+          })
+          .then(r => r.json())
+          .then(j => {
+            if (j.ok) { location.reload(); }
+            else { alert('Failed to set location: ' + (j.error || 'unknown')); }
+          })
+          .catch(e => alert('Network error: ' + e))
+          .finally(() => {
+            locBtn.disabled = false;
+            locBtn.innerHTML = '<i class="fa-solid fa-location-dot me-1"></i>Use GPS Location';
+          });
+        },
+        err => {
+          alert('Location error: ' + err.message);
+          locBtn.disabled = false;
+          locBtn.innerHTML = '<i class="fa-solid fa-location-dot me-1"></i>Use GPS Location';
+        },
+        { enableHighAccuracy: true, timeout: 8000 }
+      );
+    });
+  }
+
+  // ── Add to cart feedback ──────────────────────────────
+  document.querySelectorAll('.add-form').forEach(form => {
+    form.addEventListener('submit', e => {
+      const btn = form.querySelector('.btn-add');
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+      btn.disabled = true;
+    });
+  });
+
+  // ── City Selector ──────────────────────────────────────
+  const citySelect = document.getElementById('citySelect');
+  if (citySelect) {
+    // 1. Fetch cities and populate
+    fetch('/core/locations.json')
+      .then(r => r.json())
+      .then(j => {
+        if (j.ok && j.groups) {
+          j.groups.forEach(group => {
+            const optgroup = document.createElement('optgroup');
+            optgroup.label = group.region_label;
+            group.items.forEach(item => {
+              const opt = document.createElement('option');
+              opt.value = item.id;
+              opt.textContent = item.name;
+              optgroup.appendChild(opt);
+            });
+            citySelect.appendChild(optgroup);
+          });
+        }
+      })
+      .catch(e => console.error("Failed to load cities", e));
+
+    // 2. Handle selection
+    citySelect.addEventListener('change', () => {
+      const locId = citySelect.value;
+      if (!locId) return;
+      
+      citySelect.disabled = true;
+      const fd = new FormData();
+      fd.append('location_id', locId);
+      
+      fetch('/core/set-location/', {
+        method: 'POST',
+        headers: { 'X-CSRFToken': getCsrf() },
+        body: fd
+      })
+      .then(r => r.json())
+      .then(j => {
+        if (j.ok) location.reload();
+        else alert('Failed to change city.');
+      })
+      .catch(e => alert('Network error.'))
+      .finally(() => { citySelect.disabled = false; });
+    });
   }
 </script>
 {% endblock %}

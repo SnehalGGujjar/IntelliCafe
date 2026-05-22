@@ -1,10 +1,145 @@
-{% extends "admin/base_site.html" %}
+{% extends 'base.html' %}
+{% block title %}Staff Login{% endblock %}
+
+{% block extra_head %}
+<style>
+  .auth-page {
+    min-height: calc(100vh - 130px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 3rem 1rem;
+    background: linear-gradient(135deg, var(--brand-dark) 0%, var(--brand-mid) 100%);
+  }
+  .auth-card {
+    background: var(--brand-card);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg);
+    width: 100%;
+    max-width: 420px;
+    overflow: hidden;
+    animation: fadeInUp .4s ease both;
+  }
+  .auth-header {
+    background: linear-gradient(135deg, var(--brand-amber), var(--brand-gold));
+    padding: 2.5rem 2rem;
+    text-align: center;
+    position: relative;
+  }
+  .auth-header-icon {
+    width: 64px; height: 64px;
+    background: rgba(255,255,255,.25);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.75rem;
+    color: #fff;
+    margin: 0 auto 1rem;
+  }
+  .auth-header h2 { color: #fff; font-size: 1.6rem; margin-bottom: .3rem; }
+  .auth-header p  { color: rgba(255,255,255,.8); font-size: .88rem; margin: 0; }
+
+  .auth-body { padding: 2rem; }
+
+  .field-group { margin-bottom: 1.25rem; }
+  .field-label {
+    font-size: .82rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: .5px;
+    margin-bottom: .4rem;
+    display: block;
+  }
+  .field-input {
+    width: 100%;
+    border: 1.5px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    padding: .7rem 1rem;
+    font-size: .95rem;
+    color: var(--text-primary);
+    background: #fafafa;
+    outline: none;
+    transition: var(--transition);
+  }
+  .field-input:focus {
+    border-color: var(--brand-amber);
+    box-shadow: 0 0 0 3px rgba(201,125,46,.15);
+    background: #fff;
+  }
+  .field-input::placeholder { color: #bbb; }
+
+  .input-icon-wrap {
+    position: relative;
+  }
+  .input-icon-wrap .f-icon {
+    position: absolute;
+    left: .9rem; top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-muted);
+    font-size: .9rem;
+  }
+  .input-icon-wrap .field-input { padding-left: 2.4rem; }
+
+  .auth-footer-links { margin-top: 1rem; text-align: center; font-size: .83rem; }
+  .auth-footer-links a { color: var(--brand-amber); text-decoration: none; }
+  .auth-footer-links a:hover { text-decoration: underline; }
+</style>
+{% endblock %}
+
 {% block content %}
-<h1>Staff Login</h1>
-<form method="post">{% csrf_token %}
-  <div><label>Username</label><input type="text" name="username" class="vTextField"></div>
-  <div><label>Password</label><input type="password" name="password" class="vTextField"></div>
-  <button class="button">Login</button>
-  <p><a href="{% url 'accounts:forgot' %}">Forgot password?</a></p>
-</form>
+<section class="auth-page">
+  <div class="auth-card">
+
+    <div class="auth-header">
+      <div class="auth-header-icon"><i class="fa-solid fa-mug-hot"></i></div>
+      <h2>Staff Login</h2>
+      <p>Access the CafeBrew management dashboard</p>
+    </div>
+
+    <div class="auth-body">
+      {% if messages %}
+        {% for m in messages %}
+        <div class="alert alert-{{ m.tags }} mb-3">{{ m }}</div>
+        {% endfor %}
+      {% endif %}
+
+      <form method="post" id="loginForm">
+        {% csrf_token %}
+        <div class="field-group">
+          <label class="field-label" for="id_username">Username</label>
+          <div class="input-icon-wrap">
+            <i class="fa-solid fa-user f-icon"></i>
+            <input id="id_username" type="text" name="username" class="field-input"
+                   placeholder="Enter your username" autocomplete="username" required autofocus>
+          </div>
+        </div>
+        <div class="field-group">
+          <label class="field-label" for="id_password">Password</label>
+          <div class="input-icon-wrap">
+            <i class="fa-solid fa-lock f-icon"></i>
+            <input id="id_password" type="password" name="password" class="field-input"
+                   placeholder="Enter your password" autocomplete="current-password" required>
+          </div>
+        </div>
+        <button type="submit" class="btn-brew btn w-100 mt-2" id="loginBtn">
+          <i class="fa-solid fa-right-to-bracket me-2"></i>Login
+        </button>
+      </form>
+
+      <div class="auth-footer-links">
+        <a href="{% url 'accounts:forgot' %}"><i class="fa-solid fa-key me-1"></i>Forgot password?</a>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  document.getElementById('loginForm').addEventListener('submit', () => {
+    const btn = document.getElementById('loginBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-2"></i>Logging in…';
+  });
+</script>
 {% endblock %}

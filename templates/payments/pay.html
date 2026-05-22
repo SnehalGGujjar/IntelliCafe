@@ -1,15 +1,23 @@
 {% extends 'base.html' %}
-{% block title %}Pay{% endblock %}
+{% block title %}Pay — Order #{{ payment.order.id }}{% endblock %}
 {% block content %}
-<div class="ai-card">
+<div class="ai-card text-center">
   <h4>Payment</h4>
   <p>Status: <span class="badge bg-warning text-dark">{{ payment.status }}</span></p>
   <p>Amount: <strong>₹ {{ payment.amount }}</strong></p>
   <p class="text-muted">Ask a staff member to confirm payment after you have paid digitally at the counter.</p>
   {% if request.user.is_staff %}
-  <a class="btn btn-success" href="{% url 'payments:confirm' payment.uuid %}">Confirm Payment</a>
+  {# Must be a POST form — the confirm view uses @require_POST #}
+  <form method="post" action="{% url 'payments:confirm' payment.uuid %}" onsubmit="return confirm('Mark this payment as confirmed?');">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-success">Confirm Payment</button>
+  </form>
+  <form method="post" action="{% url 'payments:mark_failed' payment.uuid %}" class="mt-2" onsubmit="return confirm('Mark this payment as failed?');">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-outline-danger btn-sm">Mark as Failed</button>
+  </form>
   {% else %}
-  <div class="alert alert-info">Staff-only confirmation button appears when logged in.</div>
+  <div class="alert alert-info mt-3">Staff-only confirmation button appears when logged in as staff.</div>
   {% endif %}
 </div>
 {% endblock %}

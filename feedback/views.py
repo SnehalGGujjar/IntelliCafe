@@ -1,10 +1,12 @@
 from django.http import JsonResponse
 from django.views.decorators.http import require_POST
+from django.views.decorators.csrf import csrf_protect
 from django.core.validators import ValidationError
 from .models import Feedback
 from orders.models import Order
 
 @require_POST
+@csrf_protect
 def submit_feedback(request):
     try:
         rating = int(request.POST.get("rating", "0"))

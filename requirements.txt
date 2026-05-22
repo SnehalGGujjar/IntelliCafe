@@ -3,3 +3,7 @@ gunicorn
 whitenoise
 psycopg2-binary
 dj-database-url
+Pillow
+django-jazzmin
+qrcode[pil]
+requests

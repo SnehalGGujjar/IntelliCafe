@@ -1,0 +1,462 @@
+{% extends 'base.html' %}
+{% block title %}Welcome{% endblock %}
+{% block meta_description %}CafeBrew — Smart QR café ordering with weather-aware menus, seamless payments, and a cozy experience.{% endblock %}
+
+{% block extra_head %}
+<style>
+  /* ── Hero ───────────────────────────────────────── */
+  .hero {
+    background: linear-gradient(135deg, var(--brand-dark) 0%, var(--brand-mid) 60%, #3d1f00 100%);
+    min-height: 88vh;
+    display: flex;
+    align-items: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(ellipse at 20% 50%, rgba(201,125,46,.18) 0%, transparent 60%),
+      radial-gradient(ellipse at 80% 20%, rgba(232,169,76,.12) 0%, transparent 50%);
+    pointer-events: none;
+  }
+  .hero-content { position: relative; z-index: 1; }
+  .hero-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: .4rem;
+    background: rgba(232,169,76,.15);
+    border: 1px solid rgba(232,169,76,.3);
+    color: var(--brand-gold);
+    padding: .35rem 1rem;
+    border-radius: 30px;
+    font-size: .8rem;
+    font-weight: 600;
+    letter-spacing: .5px;
+    text-transform: uppercase;
+    margin-bottom: 1.5rem;
+    animation: fadeInUp .5s ease both;
+  }
+  .hero h1 {
+    font-size: clamp(2.5rem, 6vw, 4.5rem);
+    line-height: 1.1;
+    color: #fff;
+    margin-bottom: 1.2rem;
+    animation: fadeInUp .5s .1s ease both;
+  }
+  .hero h1 .accent { color: var(--brand-gold); }
+  .hero p.lead {
+    color: rgba(255,255,255,.7);
+    font-size: 1.15rem;
+    max-width: 520px;
+    line-height: 1.65;
+    margin-bottom: 2.2rem;
+    animation: fadeInUp .5s .2s ease both;
+  }
+  .hero-ctas {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    animation: fadeInUp .5s .3s ease both;
+  }
+  .hero-visual {
+    position: relative;
+    animation: fadeIn .8s .4s ease both;
+  }
+  .hero-visual img {
+    border-radius: var(--radius-lg);
+    box-shadow: 0 20px 60px rgba(0,0,0,.5);
+    width: 100%;
+    max-height: 480px;
+    object-fit: cover;
+  }
+  .hero-visual .floating-card {
+    position: absolute;
+    background: rgba(255,255,255,.12);
+    backdrop-filter: blur(16px);
+    border: 1px solid rgba(255,255,255,.2);
+    border-radius: var(--radius-md);
+    padding: .85rem 1.2rem;
+    color: #fff;
+    font-size: .85rem;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    box-shadow: var(--shadow-lg);
+  }
+  .floating-card.fc-top {
+    top: -18px;
+    right: -18px;
+    animation: floatY 3s ease-in-out infinite;
+  }
+  .floating-card.fc-bottom {
+    bottom: -18px;
+    left: -18px;
+    animation: floatY 3.5s .5s ease-in-out infinite;
+  }
+  .floating-card .fc-icon {
+    font-size: 1.4rem;
+    color: var(--brand-gold);
+  }
+
+  @keyframes floatY {
+    0%, 100% { transform: translateY(0); }
+    50%       { transform: translateY(-8px); }
+  }
+
+  /* ── Stats Strip ─────────────────────────────────── */
+  .stats-strip {
+    background: var(--brand-warm);
+    border-top: 1px solid var(--border-color);
+    border-bottom: 1px solid var(--border-color);
+    padding: 2.5rem 0;
+  }
+  .stat-item { text-align: center; }
+  .stat-number {
+    font-family: 'Playfair Display', serif;
+    font-size: 2.2rem;
+    font-weight: 700;
+    color: var(--brand-amber);
+    line-height: 1;
+  }
+  .stat-label {
+    font-size: .85rem;
+    color: var(--text-muted);
+    font-weight: 500;
+    margin-top: .25rem;
+    letter-spacing: .3px;
+    text-transform: uppercase;
+  }
+
+  /* ── Features ────────────────────────────────────── */
+  .features-section { padding: 5rem 0; }
+  .section-header { text-align: center; margin-bottom: 3.5rem; }
+  .section-label {
+    display: inline-block;
+    background: rgba(201,125,46,.1);
+    color: var(--brand-amber);
+    font-size: .75rem;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    padding: .3rem .9rem;
+    border-radius: 20px;
+    margin-bottom: .75rem;
+  }
+  .section-title {
+    font-size: 2.4rem;
+    color: var(--text-primary);
+    margin-bottom: .5rem;
+  }
+  .section-sub { color: var(--text-muted); max-width: 500px; margin: 0 auto; }
+
+  .feature-card {
+    background: var(--brand-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: 2rem 1.75rem;
+    height: 100%;
+    transition: var(--transition);
+    position: relative;
+    overflow: hidden;
+  }
+  .feature-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--brand-amber), var(--brand-gold));
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform .3s ease;
+  }
+  .feature-card:hover { transform: translateY(-6px); box-shadow: var(--shadow-lg); }
+  .feature-card:hover::before { transform: scaleX(1); }
+
+  .feature-icon {
+    width: 56px; height: 56px;
+    background: linear-gradient(135deg, rgba(201,125,46,.15), rgba(232,169,76,.1));
+    border-radius: var(--radius-sm);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.5rem;
+    color: var(--brand-amber);
+    margin-bottom: 1.25rem;
+  }
+  .feature-card h4 {
+    font-size: 1.1rem;
+    font-weight: 700;
+    margin-bottom: .6rem;
+    color: var(--text-primary);
+  }
+  .feature-card p {
+    font-size: .9rem;
+    color: var(--text-muted);
+    line-height: 1.6;
+    margin: 0;
+  }
+
+  /* ── How It Works ────────────────────────────────── */
+  .steps-section {
+    background: linear-gradient(135deg, var(--brand-dark), var(--brand-mid));
+    padding: 5rem 0;
+    color: #fff;
+    position: relative;
+    overflow: hidden;
+  }
+  .steps-section::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: radial-gradient(ellipse at 30% 60%, rgba(201,125,46,.12) 0%, transparent 60%);
+    pointer-events: none;
+  }
+  .step-card {
+    text-align: center;
+    padding: 1.5rem;
+    position: relative;
+  }
+  .step-number {
+    width: 52px; height: 52px;
+    background: linear-gradient(135deg, var(--brand-amber), var(--brand-gold));
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 800;
+    font-size: 1.2rem;
+    color: #fff;
+    margin: 0 auto 1.2rem;
+    box-shadow: 0 4px 16px rgba(200,125,46,.45);
+  }
+  .step-card h5 { color: #fff; font-weight: 600; margin-bottom: .4rem; }
+  .step-card p  { color: rgba(255,255,255,.6); font-size: .9rem; }
+
+  /* connector arrow */
+  .step-arrow {
+    position: absolute;
+    top: 40px; right: -20px;
+    color: rgba(232,169,76,.4);
+    font-size: 1.5rem;
+    display: none;
+  }
+  @media (min-width: 768px) { .step-arrow { display: block; } }
+
+  /* ── CTA Banner ──────────────────────────────────── */
+  .cta-banner {
+    background: linear-gradient(135deg, var(--brand-amber) 0%, var(--brand-gold) 100%);
+    padding: 4rem 0;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .cta-banner::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23fff' fill-opacity='0.06'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+  }
+  .cta-banner h2 { color: #fff; font-size: 2.2rem; margin-bottom: .75rem; position: relative; }
+  .cta-banner p  { color: rgba(255,255,255,.85); font-size: 1.1rem; position: relative; margin-bottom: 2rem; }
+  .btn-cta-white {
+    background: #fff;
+    color: var(--brand-amber);
+    font-weight: 700;
+    padding: .75rem 2rem;
+    border-radius: var(--radius-sm);
+    border: none;
+    font-size: 1rem;
+    transition: var(--transition);
+    position: relative;
+    text-decoration: none;
+    display: inline-block;
+  }
+  .btn-cta-white:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 24px rgba(0,0,0,.2);
+    color: var(--brand-brown);
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- ╔══ HERO ══════════════════════════════════════════════╗ -->
+<section class="hero">
+  <div class="container">
+    <div class="row align-items-center g-5">
+      <div class="col-lg-6 hero-content">
+        <div class="hero-badge">
+          <i class="fa-solid fa-bolt"></i> Smart QR Ordering
+        </div>
+        <h1>
+          Your Café,<br>
+          <span class="accent">Smarter</span> Than Ever
+        </h1>
+        <p class="lead">
+          Scan. Order. Pay. No apps. No waiting. CafeBrew brings weather-aware menus,
+          instant QR payments, and real-time kitchen updates to your table.
+        </p>
+        <div class="hero-ctas">
+          <a href="{% url 'menu:today' %}" class="btn-brew btn btn-lg px-4">
+            <i class="fa-solid fa-utensils me-2"></i>View Today's Menu
+          </a>
+          <a href="{% url 'core:about' %}" class="btn-brew-outline btn btn-lg px-4">
+            Learn More
+          </a>
+        </div>
+      </div>
+      <div class="col-lg-6">
+        <div class="hero-visual">
+          <img src="https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?q=80&w=800&auto=format&fit=crop"
+               alt="Cozy café with coffee and laptop"
+               loading="lazy">
+          <div class="floating-card fc-top">
+            <span class="fc-icon"><i class="fa-solid fa-cloud-sun-rain"></i></span>
+            <div>
+              <div style="font-size:.7rem;opacity:.7">Weather-Aware Menu</div>
+              <div style="font-weight:700">Hot today? Try Cold Brew!</div>
+            </div>
+          </div>
+          <div class="floating-card fc-bottom">
+            <span class="fc-icon"><i class="fa-solid fa-circle-check" style="color:#2ecc71"></i></span>
+            <div>
+              <div style="font-size:.7rem;opacity:.7">Order placed</div>
+              <div style="font-weight:700">Being prepared now ☕</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+<!-- ╚══════════════════════════════════════════════════════╝ -->
+
+<!-- ╔══ STATS ══════════════════════════════════════════════╗ -->
+<section class="stats-strip">
+  <div class="container">
+    <div class="row g-4 justify-content-center">
+      <div class="col-6 col-md-3 stat-item">
+        <div class="stat-number">30s</div>
+        <div class="stat-label">Avg. Order Time</div>
+      </div>
+      <div class="col-6 col-md-3 stat-item">
+        <div class="stat-number">0%</div>
+        <div class="stat-label">App Downloads Needed</div>
+      </div>
+      <div class="col-6 col-md-3 stat-item">
+        <div class="stat-number">Live</div>
+        <div class="stat-label">Weather Menu Filters</div>
+      </div>
+      <div class="col-6 col-md-3 stat-item">
+        <div class="stat-number">UPI</div>
+        <div class="stat-label">QR Payment Ready</div>
+      </div>
+    </div>
+  </div>
+</section>
+<!-- ╚══════════════════════════════════════════════════════╝ -->
+
+<!-- ╔══ FEATURES ═══════════════════════════════════════════╗ -->
+<section class="features-section">
+  <div class="container">
+    <div class="section-header">
+      <span class="section-label">Why CafeBrew</span>
+      <h2 class="section-title">Everything a café needs,<br>nothing it doesn't</h2>
+      <p class="section-sub">Built for speed, designed for delight.</p>
+    </div>
+    <div class="row g-4">
+      <div class="col-sm-6 col-lg-4">
+        <div class="feature-card">
+          <div class="feature-icon"><i class="fa-solid fa-qrcode"></i></div>
+          <h4>QR Table Ordering</h4>
+          <p>Customers scan a QR code at their table, browse the menu, and place orders without needing any app or account.</p>
+        </div>
+      </div>
+      <div class="col-sm-6 col-lg-4">
+        <div class="feature-card">
+          <div class="feature-icon"><i class="fa-solid fa-cloud-sun"></i></div>
+          <h4>Weather-Smart Menus</h4>
+          <p>The menu automatically highlights items suited to the current weather — hot soups on cold days, cold brews on hot ones.</p>
+        </div>
+      </div>
+      <div class="col-sm-6 col-lg-4">
+        <div class="feature-card">
+          <div class="feature-icon"><i class="fa-solid fa-indian-rupee-sign"></i></div>
+          <h4>Instant QR Payments</h4>
+          <p>UPI-ready QR codes displayed at checkout. Staff confirms payment, and the bill is emailed automatically.</p>
+        </div>
+      </div>
+      <div class="col-sm-6 col-lg-4">
+        <div class="feature-card">
+          <div class="feature-icon"><i class="fa-solid fa-boxes-stacked"></i></div>
+          <h4>Inventory Tracking</h4>
+          <p>Stock levels auto-deduct with every confirmed order. Get alerts before items run out.</p>
+        </div>
+      </div>
+      <div class="col-sm-6 col-lg-4">
+        <div class="feature-card">
+          <div class="feature-icon"><i class="fa-solid fa-chart-line"></i></div>
+          <h4>Analytics Dashboard</h4>
+          <p>Revenue, top-selling items, order trends — all in one admin view updated in real time.</p>
+        </div>
+      </div>
+      <div class="col-sm-6 col-lg-4">
+        <div class="feature-card">
+          <div class="feature-icon"><i class="fa-solid fa-shield-halved"></i></div>
+          <h4>Staff OTP Login</h4>
+          <p>Employees authenticate with a time-limited OTP sent to email — no weak password risks.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+<!-- ╚══════════════════════════════════════════════════════╝ -->
+
+<!-- ╔══ HOW IT WORKS ════════════════════════════════════════╗ -->
+<section class="steps-section">
+  <div class="container">
+    <div class="section-header mb-5">
+      <span class="section-label" style="background:rgba(232,169,76,.15);color:var(--brand-gold)">How It Works</span>
+      <h2 class="section-title" style="color:#fff">Order in three simple steps</h2>
+    </div>
+    <div class="row g-4 justify-content-center">
+      <div class="col-md-4">
+        <div class="step-card">
+          <div class="step-number">1</div>
+          <i class="fa-solid fa-chevron-right step-arrow"></i>
+          <h5>Scan QR Code</h5>
+          <p>Find the QR code on your table and scan it with your phone camera — no app needed.</p>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="step-card">
+          <div class="step-number">2</div>
+          <i class="fa-solid fa-chevron-right step-arrow"></i>
+          <h5>Browse & Order</h5>
+          <p>See today's menu tailored to the weather, pick your items, and add them to cart.</p>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="step-card">
+          <div class="step-number">3</div>
+          <h5>Pay & Relax</h5>
+          <p>Scan the payment QR, complete UPI payment, and your order is confirmed instantly.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+<!-- ╚══════════════════════════════════════════════════════╝ -->
+
+<!-- ╔══ CTA BANNER ═════════════════════════════════════════╗ -->
+<section class="cta-banner">
+  <div class="container">
+    <h2>Ready to order something delicious?</h2>
+    <p>Browse today's menu — personalized to the weather right now.</p>
+    <a href="{% url 'menu:today' %}" class="btn-cta-white">
+      <i class="fa-solid fa-arrow-right me-2"></i>See Today's Menu
+    </a>
+  </div>
+</section>
+<!-- ╚══════════════════════════════════════════════════════╝ -->
+
+{% endblock %}

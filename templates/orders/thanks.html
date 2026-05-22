@@ -1,98 +1,253 @@
 {% extends 'base.html' %}
-{% block title %}Thank you{% endblock %}
+{% block title %}Thank You!{% endblock %}
+
+{% block extra_head %}
+<style>
+  .thanks-page { padding: 4rem 0 6rem; }
+  .thanks-card {
+    background: var(--brand-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg);
+    max-width: 480px;
+    margin: 0 auto;
+    overflow: hidden;
+    animation: fadeInUp .5s ease both;
+  }
+  .thanks-header {
+    background: linear-gradient(135deg, #1a6633, #2ecc71);
+    padding: 2.5rem 2rem;
+    text-align: center;
+    color: #fff;
+  }
+  .success-icon {
+    width: 72px; height: 72px;
+    background: rgba(255,255,255,.2);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 2rem;
+    margin: 0 auto 1rem;
+    animation: popIn .5s .2s cubic-bezier(.34,1.56,.64,1) both;
+  }
+  @keyframes popIn {
+    from { transform: scale(0); opacity: 0; }
+    to   { transform: scale(1); opacity: 1; }
+  }
+  .thanks-header h2 { color: #fff; font-size: 1.9rem; margin-bottom: .4rem; }
+  .thanks-header p  { color: rgba(255,255,255,.8); font-size: .95rem; margin: 0; }
+
+  .thanks-body { padding: 2rem; }
+  .order-info-box {
+    background: var(--brand-warm);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    padding: 1rem 1.25rem;
+    margin-bottom: 1.5rem;
+    display: flex; align-items: center; gap: .75rem;
+  }
+  .order-info-box i { font-size: 1.4rem; color: var(--brand-amber); }
+  .order-info-box .oi-label { font-size: .78rem; color: var(--text-muted); }
+  .order-info-box .oi-val   { font-weight: 700; color: var(--text-primary); }
+
+  .thanks-actions { display: flex; flex-direction: column; gap: .75rem; }
+
+  /* Feedback modal styles */
+  .modal-content { border-radius: var(--radius-md); border: none; box-shadow: var(--shadow-lg); }
+  .modal-header  { border-bottom: 1px solid var(--border-color); padding: 1.25rem 1.5rem; }
+  .modal-body    { padding: 1.5rem; }
+  .modal-footer  { border-top: 1px solid var(--border-color); padding: 1rem 1.5rem; }
+
+  /* Star rating */
+  .star-rating { display: flex; gap: .35rem; margin-bottom: 1rem; }
+  .star-btn {
+    background: none; border: none;
+    font-size: 2rem; cursor: pointer;
+    color: #ddd;
+    transition: var(--transition);
+    padding: 0;
+    line-height: 1;
+  }
+  .star-btn:hover,
+  .star-btn.active { color: var(--brand-gold); transform: scale(1.15); }
+  .star-btn.lit    { color: var(--brand-gold); }
+
+  .form-control-brew {
+    border: 1.5px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    padding: .6rem .9rem;
+    font-size: .9rem;
+    transition: var(--transition);
+    width: 100%;
+    outline: none;
+    resize: vertical;
+  }
+  .form-control-brew:focus {
+    border-color: var(--brand-amber);
+    box-shadow: 0 0 0 3px rgba(201,125,46,.15);
+  }
+  .form-label-brew { font-weight: 600; font-size: .85rem; color: var(--text-secondary); margin-bottom: .4rem; display: block; }
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="ai-card text-center">
-  <h3>Thank you!</h3>
-  <p>Your payment was confirmed. Order #{{ order_id }} is being prepared. A bill has been emailed.</p>
+<section class="thanks-page">
+  <div class="container">
+    <div class="thanks-card">
 
-  <button class="btn btn-primary mt-2" data-bs-toggle="modal" data-bs-target="#feedbackModal">
-    Leave feedback
-  </button>
-  <a class="btn btn-outline-secondary mt-2" href="{% url 'menu:today' %}">Order again</a>
-</div>
+      <!-- Success header -->
+      <div class="thanks-header">
+        <div class="success-icon"><i class="fa-solid fa-check"></i></div>
+        <h2>Order Confirmed!</h2>
+        <p>Your payment has been received. We're preparing your order now.</p>
+      </div>
 
-<!-- Feedback Modal -->
-<div class="modal fade" id="feedbackModal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog">
+      <!-- Body -->
+      <div class="thanks-body">
+        <div class="order-info-box">
+          <i class="fa-solid fa-receipt"></i>
+          <div>
+            <div class="oi-label">Order Number</div>
+            <div class="oi-val">#{{ order_id }}</div>
+          </div>
+        </div>
+        <div class="order-info-box">
+          <i class="fa-solid fa-envelope-open-text"></i>
+          <div>
+            <div class="oi-label">Receipt</div>
+            <div class="oi-val">Bill will be sent to your email shortly</div>
+          </div>
+        </div>
+
+        <div class="thanks-actions mt-3">
+          <button class="btn-brew btn" data-bs-toggle="modal" data-bs-target="#feedbackModal" id="feedbackBtn">
+            <i class="fa-solid fa-star me-2"></i>Rate Your Experience
+          </button>
+          <a href="{% url 'menu:today' %}" class="btn-brew-outline btn">
+            <i class="fa-solid fa-arrow-left me-2"></i>Back to Menu
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ╔══ FEEDBACK MODAL ══════════════════════════════════════╗ -->
+<div class="modal fade" id="feedbackModal" tabindex="-1" aria-labelledby="feedbackModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content">
       <div class="modal-header">
-        <h5 class="modal-title">Rate your experience</h5>
+        <h5 class="modal-title" id="feedbackModalLabel">
+          <i class="fa-solid fa-star text-brew me-2"></i>How was your experience?
+        </h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <div class="modal-body">
         <form id="feedbackForm">
           <input type="hidden" name="order_id" value="{{ order_id }}">
-          <div class="mb-3">
-            <label class="form-label">Rating</label>
-            <select name="rating" class="form-select" required>
-              <option value="">Select</option>
-              <option value="5">★★★★★ — Loved it</option>
-              <option value="4">★★★★☆ — Good</option>
-              <option value="3">★★★☆☆ — Okay</option>
-              <option value="2">★★☆☆☆ — Poor</option>
-              <option value="1">★☆☆☆☆ — Bad</option>
-            </select>
+
+          <!-- Star Rating -->
+          <label class="form-label-brew">Your Rating</label>
+          <div class="star-rating" id="starRating" role="group" aria-label="Rating">
+            {% for i in "12345" %}
+            <button type="button" class="star-btn" data-val="{{ i }}" aria-label="{{ i }} star{% if i != '1' %}s{% endif %}">★</button>
+            {% endfor %}
           </div>
+          <input type="hidden" name="rating" id="ratingInput" value="">
+
+          <!-- Comment -->
           <div class="mb-3">
-            <label class="form-label">Comments (optional)</label>
-            <textarea name="comment" class="form-control" rows="3" maxlength="2000" placeholder="What did we do well? What could be better?"></textarea>
+            <label class="form-label-brew" for="fbComment">Comments <span style="font-weight:400;color:var(--text-muted)">(optional)</span></label>
+            <textarea id="fbComment" name="comment" class="form-control-brew" rows="3"
+                      maxlength="2000" placeholder="What did we do well? What could we improve?"></textarea>
           </div>
-          <div class="mb-3">
-            <label class="form-label">Email (optional)</label>
-            <input type="email" name="email" class="form-control" placeholder="you@example.com">
-            <div class="form-text">We may contact you about your feedback.</div>
+
+          <!-- Email -->
+          <div class="mb-2">
+            <label class="form-label-brew" for="fbEmail">Your Email <span style="font-weight:400;color:var(--text-muted)">(optional)</span></label>
+            <input id="fbEmail" type="email" name="email" class="form-control-brew"
+                   placeholder="you@example.com">
           </div>
         </form>
-        <div id="fbAlert" class="alert d-none mt-2" role="alert"></div>
+        <div id="fbAlert" class="alert d-none mt-3" role="alert"></div>
       </div>
       <div class="modal-footer">
-        <button id="fbSubmit" type="button" class="btn btn-primary">Submit</button>
+        <button type="button" class="btn-brew-outline btn" data-bs-dismiss="modal">Skip</button>
+        <button id="fbSubmit" type="button" class="btn-brew btn">
+          <i class="fa-solid fa-paper-plane me-1"></i>Submit Feedback
+        </button>
       </div>
     </div>
   </div>
 </div>
+<!-- ╚═══════════════════════════════════════════════════════╝ -->
+{% endblock %}
 
+{% block extra_scripts %}
 <script>
-function getCsrf(){
-  const meta = document.querySelector('meta[name="csrf-token"]');
-  if (meta && meta.content) return meta.content;
-  const m = document.cookie.match(/(?:^|;)\s*csrftoken=([^;]+)/);
-  return m ? decodeURIComponent(m[1]) : '';
-}
+  // ── Star rating interaction ───────────────────────────
+  const stars = document.querySelectorAll('.star-btn');
+  const ratingInput = document.getElementById('ratingInput');
+  let selectedRating = 0;
 
-const fbBtn = document.getElementById('fbSubmit');
-const fbForm = document.getElementById('feedbackForm');
-const fbAlert = document.getElementById('fbAlert');
-
-fbBtn?.addEventListener('click', async () => {
-  const fd = new FormData(fbForm);
-  fbBtn.disabled = true; fbBtn.innerText = 'Submitting...';
-  fbAlert.classList.add('d-none');
-
-  try {
-    const r = await fetch('/feedback/submit/', {
-      method: 'POST',
-      headers: { 'X-CSRFToken': getCsrf() },
-      body: fd
+  stars.forEach(btn => {
+    btn.addEventListener('mouseenter', () => {
+      const val = +btn.dataset.val;
+      stars.forEach(s => s.classList.toggle('lit', +s.dataset.val <= val));
     });
-    const j = await r.json();
-    if (j.ok){
-      fbAlert.className = 'alert alert-success';
-      fbAlert.textContent = 'Thanks for your feedback!';
+    btn.addEventListener('mouseleave', () => {
+      stars.forEach(s => s.classList.toggle('lit', +s.dataset.val <= selectedRating));
+    });
+    btn.addEventListener('click', () => {
+      selectedRating = +btn.dataset.val;
+      ratingInput.value = selectedRating;
+      stars.forEach(s => {
+        s.classList.toggle('active', +s.dataset.val === selectedRating);
+        s.classList.toggle('lit', +s.dataset.val <= selectedRating);
+      });
+    });
+  });
+
+  // ── Feedback form submit ──────────────────────────────
+  const fbBtn   = document.getElementById('fbSubmit');
+  const fbForm  = document.getElementById('feedbackForm');
+  const fbAlert = document.getElementById('fbAlert');
+
+  fbBtn?.addEventListener('click', async () => {
+    if (!ratingInput.value) {
+      fbAlert.className = 'alert alert-warning';
+      fbAlert.textContent = 'Please select a star rating.';
       fbAlert.classList.remove('d-none');
-      setTimeout(() => location.href = "{% url 'menu:today' %}", 1000);
-    } else {
-      fbAlert.className = 'alert alert-danger';
-      fbAlert.textContent = 'Error: ' + (j.error || 'unknown');
-      fbAlert.classList.remove('d-none');
+      return;
     }
-  } catch (e) {
-    fbAlert.className = 'alert alert-danger';
-    fbAlert.textContent = 'Network error: ' + e;
-    fbAlert.classList.remove('d-none');
-  } finally {
-    fbBtn.disabled = false; fbBtn.innerText = 'Submit';
-  }
-});
+    const fd = new FormData(fbForm);
+    fbBtn.disabled = true;
+    fbBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i>Submitting…';
+    fbAlert.classList.add('d-none');
+    try {
+      const r = await fetch('{% url "feedback:submit" %}', {
+        method: 'POST',
+        headers: { 'X-CSRFToken': getCsrf() },
+        body: fd
+      });
+      const j = await r.json();
+      if (j.ok) {
+        fbAlert.className = 'alert alert-success';
+        fbAlert.textContent = '✓ Thanks for your feedback!';
+        fbAlert.classList.remove('d-none');
+        setTimeout(() => { location.href = "{% url 'menu:today' %}"; }, 1500);
+      } else {
+        fbAlert.className = 'alert alert-danger';
+        fbAlert.textContent = 'Error: ' + (j.error || 'Something went wrong.');
+        fbAlert.classList.remove('d-none');
+      }
+    } catch(e) {
+      fbAlert.className = 'alert alert-danger';
+      fbAlert.textContent = 'Network error. Please try again.';
+      fbAlert.classList.remove('d-none');
+    } finally {
+      fbBtn.disabled = false;
+      fbBtn.innerHTML = '<i class="fa-solid fa-paper-plane me-1"></i>Submit Feedback';
+    }
+  });
 </script>
 {% endblock %}

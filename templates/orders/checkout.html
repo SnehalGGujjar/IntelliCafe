@@ -1,103 +1,232 @@
 {% extends 'base.html' %}
-{% block title %}Pay by QR{% endblock %}
+{% block title %}Pay — Order #{{ order.id }}{% endblock %}
 
-{% block content %}
-<div class="ai-card text-center">
-  <h4 class="mb-2">Scan to Pay</h4>
-  <p class="text-muted mb-1">Order #{{ order.id }} — Total: <strong>₹ {{ order.total }}</strong></p>
-
-  {% if qr_img_url %}
-    <!-- Admin QR (preferred) with fallback to base64 if you pass qr_b64) -->
-    <div class="my-3">
-      <img src="{{ qr_img_url }}"
-           alt="Payment QR"
-           width="240" height="240"
-           class="rounded shadow-sm"
-           onerror="if('{{ qr_b64|default:'' }}'){ this.onerror=null; this.src='{{ qr_b64 }}'; }">
-    </div>
-  {% elif qr_b64 %}
-    <!-- Server-generated base64 QR fallback -->
-    <div class="my-3">
-      <img src="{{ qr_b64 }}" alt="Payment QR" width="240" height="240" class="rounded shadow-sm">
-    </div>
-  {% else %}
-    <!-- Last resort: client-side QR from status URL (works offline if you keep it) -->
-    <div id="qrcode" class="my-3 d-flex justify-content-center align-items-center" style="min-height:250px;">
-      <div class="spinner-border text-secondary" role="status"><span class="visually-hidden">Loading QR...</span></div>
-    </div>
-    <script>
-      (function(){
-        const el = document.getElementById('qrcode');
-        const qrText = "{% url 'payments:status' payment.uuid %}";
-        const url = "https://chart.googleapis.com/chart?chs=240x240&cht=qr&chl=" + encodeURIComponent(qrText);
-        const img = new Image();
-        img.src = url; img.alt = "QR Code"; img.width = 240; img.height = 240; img.className="rounded shadow-sm";
-        img.onload = () => { el.innerHTML=''; el.appendChild(img); };
-        img.onerror = () => { el.innerHTML = '<div class="alert alert-warning">QR unavailable.</div>'; };
-      })();
-    </script>
-  {% endif %}
-
-  <!-- Live payment status -->
-  <div class="mt-3">
-    <span id="payStatus" class="badge rounded-pill text-bg-secondary px-3 py-2">Checking status…</span>
-    <div class="small text-muted mt-2">This page updates automatically after payment.</div>
-  </div>
-
-  <!-- Tiny backup link only if you still want it (optional) -->
-
-
-  <!-- {% if qr_text %}
-    <div class="mt-3">
-      <a class="small link-secondary" href="{{ qr_text }}" target="_blank">Backup: open payment page</a>
-    </div>
-  {% endif %} -->
-</div>
-
-<script>
-  // Poll /payments/status/<uuid> every 4s
-  const statusUrl = "{% url 'payments:status' payment.uuid %}?init=1";
-  const badge = document.getElementById('payStatus');
-
-  const COLORS = {
-    initiated: 'text-bg-info',
-    pending: 'text-bg-warning',
-    processing: 'text-bg-warning',
-    paid: 'text-bg-success',
-    completed: 'text-bg-success',
-    failed: 'text-bg-danger',
-    cancelled: 'text-bg-dark',
-    unknown: 'text-bg-secondary'
-  };
-
-  function setBadge(text, key){
-    // reset classes
-    badge.className = 'badge rounded-pill px-3 py-2 ' + (COLORS[key] || COLORS.unknown);
-    badge.textContent = text;
+{% block extra_head %}
+<style>
+  .checkout-page { padding: 3rem 0 5rem; }
+  .checkout-card {
+    background: var(--brand-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg);
+    overflow: hidden;
+    max-width: 520px;
+    margin: 0 auto;
+    animation: fadeInUp .4s ease both;
+  }
+  .checkout-header {
+    background: linear-gradient(135deg, var(--brand-dark), var(--brand-mid));
+    padding: 2rem;
+    text-align: center;
+    color: #fff;
+  }
+  .checkout-header h2 {
+    font-family: 'Playfair Display', serif;
+    color: #fff;
+    margin-bottom: .25rem;
+  }
+  .order-meta { color: rgba(255,255,255,.65); font-size: .9rem; }
+  .amount-display {
+    font-family: 'Playfair Display', serif;
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: var(--brand-gold);
+    margin: .5rem 0;
   }
 
-  async function poll(){
-    try{
-      const r = await fetch(statusUrl, {headers: {'Accept':'application/json'}});
+  .checkout-body { padding: 2rem; }
+
+  .qr-wrapper {
+    background: #fff;
+    border: 2px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: 1.25rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 280px;
+    margin-bottom: 1.5rem;
+    position: relative;
+  }
+  .qr-wrapper img {
+    border-radius: 8px;
+    max-width: 240px;
+    max-height: 240px;
+  }
+  .qr-scan-hint {
+    position: absolute;
+    bottom: .75rem;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0,0,0,.6);
+    color: #fff;
+    font-size: .72rem;
+    padding: .2rem .7rem;
+    border-radius: 20px;
+    white-space: nowrap;
+  }
+
+  .status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: .4rem;
+    padding: .5rem 1.2rem;
+    border-radius: 30px;
+    font-weight: 600;
+    font-size: .9rem;
+    transition: var(--transition);
+  }
+  .status-pending  { background: #fffbf0; color: #8a6400; border: 1.5px solid #f0c040; }
+  .status-waiting  { background: #f0f6ff; color: #1a4a8a; border: 1.5px solid #90b8f0; animation: pulse 2s infinite; }
+  .status-success  { background: #f0faf3; color: #1a6633; border: 1.5px solid #5dd87a; }
+  .status-fail     { background: #fff0f0; color: #c0392b; border: 1.5px solid #f0a0a0; }
+
+  .checkout-divider {
+    border: none;
+    border-top: 1px solid var(--border-color);
+    margin: 1.5rem 0;
+  }
+  .step-list { list-style: none; padding: 0; margin: 0; }
+  .step-list li {
+    display: flex;
+    align-items: flex-start;
+    gap: .75rem;
+    margin-bottom: .75rem;
+    font-size: .88rem;
+    color: var(--text-secondary);
+  }
+  .step-list li .step-num {
+    width: 22px; height: 22px;
+    background: linear-gradient(135deg, var(--brand-amber), var(--brand-gold));
+    color: #fff;
+    border-radius: 50%;
+    font-size: .7rem;
+    font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="checkout-page">
+  <div class="container">
+    <div class="checkout-card">
+
+      <!-- Header -->
+      <div class="checkout-header">
+        <div class="order-meta">Order #{{ order.id }}</div>
+        <h2>Scan to Pay</h2>
+        <div class="amount-display">₹ {{ order.total }}</div>
+        <div class="order-meta">{{ order.customer_email }}</div>
+      </div>
+
+      <!-- Body -->
+      <div class="checkout-body">
+
+        <!-- QR Code -->
+        <div class="qr-wrapper" id="qrWrapper">
+          {% if qr_img_url %}
+            <img src="{{ qr_img_url }}" alt="Payment QR Code"
+                 id="mainQR"
+                 onerror="handleQRError(this)">
+          {% elif qr_b64 %}
+            <img src="{{ qr_b64 }}" alt="Payment QR Code">
+          {% else %}
+            <div class="d-flex flex-column align-items-center gap-2 text-muted">
+              <div class="spinner-border" role="status" style="color:var(--brand-amber)">
+                <span class="visually-hidden">Loading…</span>
+              </div>
+              <small>Generating QR…</small>
+            </div>
+          {% endif %}
+          <div class="qr-scan-hint"><i class="fa-solid fa-qrcode me-1"></i>Scan with any UPI app</div>
+        </div>
+
+        <!-- Live status -->
+        <div class="text-center mb-3">
+          <span id="payStatusBadge" class="status-badge status-waiting">
+            <i class="fa-solid fa-circle-notch fa-spin me-1"></i>
+            Checking payment status…
+          </span>
+        </div>
+
+        <hr class="checkout-divider">
+
+        <!-- Steps -->
+        <ul class="step-list">
+          <li>
+            <span class="step-num">1</span>
+            Open any UPI app (PhonePe, GPay, Paytm, etc.)
+          </li>
+          <li>
+            <span class="step-num">2</span>
+            Scan the QR code above and pay ₹{{ order.total }}
+          </li>
+          <li>
+            <span class="step-num">3</span>
+            Ask a staff member to confirm, and you're done!
+          </li>
+        </ul>
+
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  // ── QR image fallback (separated from onerror attr to avoid template-in-attribute) ──
+  const qrFallback = "{{ qr_b64|escapejs }}";
+
+  function handleQRError(img) {
+    img.onerror = null;  // prevent infinite loop
+    if (qrFallback) {
+      img.src = qrFallback;
+    } else {
+      img.parentElement.innerHTML =
+        '<div class="text-muted text-center" style="padding:1rem;">' +
+        '<i class="fa-solid fa-triangle-exclamation mb-2" style="font-size:2rem;opacity:.4"></i>' +
+        '<div style="font-size:.85rem">QR unavailable. Ask staff to confirm.</div></div>';
+    }
+  }
+
+  // ── Payment status polling ──────────────────────────────
+  const statusUrl = "{% url 'payments:status' payment.uuid %}?init=1";
+  const badge = document.getElementById('payStatusBadge');
+
+  function setStatus(icon, text, cls) {
+    badge.className = 'status-badge ' + cls;
+    badge.innerHTML = icon + ' ' + text;
+  }
+
+  async function poll() {
+    try {
+      const r = await fetch(statusUrl, { headers: { 'Accept': 'application/json' } });
       const j = await r.json();
       const st = (j.status || 'unknown').toLowerCase();
 
-      if (st === 'paid' || st === 'completed' || st === 'confirmed'){
-        setBadge('Payment received', 'paid');
-        // redirect to thanks page
-        window.location.href = "{% url 'orders:thanks' order.id %}";
-        return; // stop polling
-      } else if (st === 'failed' || st === 'cancelled'){
-        setBadge('Payment failed/cancelled', st);
-      } else if (st === 'initiated' || st === 'pending' || st === 'processing'){
-        setBadge(`Awaiting payment… (${st})`, st);
+      if (['paid', 'completed', 'confirmed'].includes(st)) {
+        setStatus('<i class="fa-solid fa-circle-check"></i>', 'Payment Received! Redirecting…', 'status-success');
+        setTimeout(() => {
+          window.location.href = "{% url 'orders:thanks' order.id %}";
+        }, 1200);
+        return;
+      } else if (['failed', 'cancelled'].includes(st)) {
+        setStatus('<i class="fa-solid fa-circle-xmark"></i>', 'Payment Failed / Cancelled', 'status-fail');
+        setTimeout(poll, 8000);
+      } else if (['initiated', 'pending', 'processing'].includes(st)) {
+        setStatus('<i class="fa-solid fa-circle-notch fa-spin"></i>', `Awaiting payment…`, 'status-waiting');
+        setTimeout(poll, 4000);
       } else {
-        setBadge('Checking status…', 'unknown');
+        setStatus('<i class="fa-solid fa-circle-notch fa-spin"></i>', 'Checking status…', 'status-waiting');
+        setTimeout(poll, 4000);
       }
-    } catch(e){
-      setBadge('Network issue — retrying…', 'unknown');
-    } finally {
-      setTimeout(poll, 4000);
+    } catch(e) {
+      setStatus('<i class="fa-solid fa-wifi"></i>', 'Network issue — retrying…', 'status-pending');
+      setTimeout(poll, 5000);
     }
   }
   poll();
