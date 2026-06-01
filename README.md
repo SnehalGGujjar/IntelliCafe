@@ -1,4 +1,4 @@
-# QR Café — Django Example (v2)
+# IntelliCafe
 Now includes:
 - Browser geolocation ("Use my location") → stored in session
 - Admin-editable default lat/lon (Core → Site Settings)
