@@ -4,6 +4,7 @@ Now includes:
 - Admin-editable default lat/lon (Core → Site Settings)
 - Weather-based menu using session → site default → project default fallback
 - QR payments flow, inventory auto-deduct, email bill, analytics
+- version 2
 
 ## Quickstart
 ```
