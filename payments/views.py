@@ -7,9 +7,12 @@ from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.auth.decorators import user_passes_test
 from django.views.decorators.http import require_POST, require_GET
 from django.http import JsonResponse
+import logging
 
 from .models import Payment
 from core.models import SitePayment
+
+logger = logging.getLogger('payments')
 
 
 def pay(request, uuid):
@@ -40,28 +43,34 @@ def payment_status(request, uuid):
 @staff_member_required
 @require_POST
 def confirm(request, uuid):
-    payment = get_object_or_404(Payment, uuid=uuid)
-    order = payment.order
+    try:
+        payment = get_object_or_404(Payment, uuid=uuid)
+        order = payment.order
 
-    # Mark payment as confirmed (matches Payment.STATUS choices)
-    payment.status = 'confirmed'
-    payment.confirmed_at = timezone.now()  # correct field from Payment model
-    payment.save(update_fields=['status', 'confirmed_at'])
+        # Mark payment as confirmed (matches Payment.STATUS choices)
+        payment.status = 'confirmed'
+        payment.confirmed_at = timezone.now()  # correct field from Payment model
+        payment.save(update_fields=['status', 'confirmed_at'])
 
-    # Finalize order
-    order.status = 'paid'
-    order.recalc_total()
-    order.save(update_fields=['status', 'total'])
+        # Finalize order
+        order.status = 'paid'
+        order.recalc_total()
+        order.save(update_fields=['status', 'total'])
 
-    # Clear the cart session if this was the active order
-    if request.session.get('order_id') == order.id:
-        try:
-            del request.session['order_id']
-        except KeyError:
-            pass
+        # Clear the cart session if this was the active order
+        if request.session.get('order_id') == order.id:
+            try:
+                del request.session['order_id']
+            except KeyError:
+                pass
 
-    messages.success(request, f"Payment confirmed for Order #{order.id}.")
-    return redirect('orders:thanks', order_id=order.id)
+        logger.info(f'Payment {payment.uuid} confirmed for Order #{order.id} by {request.user}')
+        messages.success(request, f"Payment confirmed for Order #{order.id}.")
+        return redirect('orders:thanks', order_id=order.id)
+    except Exception as e:
+        logger.error(f'Error confirming payment {uuid}: {e}', exc_info=True)
+        messages.error(request, 'Failed to confirm payment. Please try again.')
+        return redirect('admin:payments_payment_changelist')
 
 
 @staff_member_required
@@ -81,22 +90,28 @@ def mark_failed(request, uuid):
     messages.warning(request, f"Payment marked as failed for Order #{order.id}. Order reopened.")
     return redirect('admin:payments_payment_changelist')
 
+@staff_member_required
 @require_POST
 def simulate_payment(request, uuid):
-    """Dev/Testing bypass to simulate a successful payment without staff login"""
-    payment = get_object_or_404(Payment, uuid=uuid)
-    order = payment.order
+    """Dev/Testing bypass to simulate a successful payment (staff only)"""
+    try:
+        payment = get_object_or_404(Payment, uuid=uuid)
+        order = payment.order
 
-    payment.status = 'confirmed'
-    payment.confirmed_at = timezone.now()
-    payment.save(update_fields=['status', 'confirmed_at'])
+        payment.status = 'confirmed'
+        payment.confirmed_at = timezone.now()
+        payment.save(update_fields=['status', 'confirmed_at'])
 
-    order.status = 'paid'
-    order.recalc_total()
-    order.save(update_fields=['status', 'total'])
+        order.status = 'paid'
+        order.recalc_total()
+        order.save(update_fields=['status', 'total'])
 
-    if request.session.get('order_id') == order.id:
-        try: del request.session['order_id']
-        except KeyError: pass
+        if request.session.get('order_id') == order.id:
+            try: del request.session['order_id']
+            except KeyError: pass
 
-    return JsonResponse({'ok': True})
+        logger.warning(f'Payment {payment.uuid} SIMULATED by {request.user} for Order #{order.id}')
+        return JsonResponse({'ok': True})
+    except Exception as e:
+        logger.error(f'Error simulating payment {uuid}: {e}', exc_info=True)
+        return JsonResponse({'ok': False, 'error': str(e)}, status=500)

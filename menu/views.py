@@ -2,10 +2,13 @@ from django.shortcuts import render
 from django.conf import settings
 from django.db.models import Q
 from django.db.utils import OperationalError, ProgrammingError
+import logging
 
 from core.models import SiteSetting, Location
 from .models import Item, MenuRule
 from .utils import get_weather
+
+logger = logging.getLogger(__name__)
 
 
 def today_menu(request):
@@ -21,7 +24,8 @@ def today_menu(request):
         )
         location_name = loc.name if loc else "Default Location"
         label = f"{location_name} ({lat:.4f}, {lon:.4f})"
-    except (OperationalError, ProgrammingError):
+    except (OperationalError, ProgrammingError) as e:
+        logger.warning(f'Database error loading site settings: {e}')
         lat = getattr(settings, "WEATHER_DEFAULT_LAT", 12.9716)
         lon = getattr(settings, "WEATHER_DEFAULT_LON", 77.5946)
         location_name = "System Default"
@@ -47,6 +51,7 @@ def today_menu(request):
                           .values_list("item_id", flat=True))
         filtered = [i for i in items_qs if (not i.rules.exists()) or (i.id in allowed_ids)]
 
+    logger.info(f'Menu loaded for {location_name}: {len(filtered)} items, condition={condition}')
     return render(request, "menu/today.html", {
         "items": filtered,
         "condition": condition,
@@ -63,14 +68,16 @@ from django.views.decorators.csrf import csrf_exempt
 
 @csrf_exempt
 def ai_concierge_api(request):
-    """Simulated Agentic AI Concierge endpoint."""
+    """Rule-based menu recommendation system (keyword matching, not actual AI).
+    NOTE: This is a simple keyword-based system, not a real AI/ML model.
+    For production, integrate with OpenAI API or similar."""
     if request.method == 'POST':
         try:
             data = json.loads(request.body)
             message = data.get('message', '').lower()
             
-            # Simulated NLP keyword extraction and reasoning
-            # Instead of strict Q objects, we will score items based on keywords.
+            # Simple keyword-based scoring (not actual NLP/AI)
+            # Scores items based on keyword matches in name and description
             items = list(Item.objects.filter(is_active=True))
             
             # Keywords

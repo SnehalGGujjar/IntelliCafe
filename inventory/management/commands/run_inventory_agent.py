@@ -4,20 +4,26 @@ from django.db import models
 from inventory.models import InventoryItem
 from core.models import AIConfiguration
 import json
+import logging
+
+logger = logging.getLogger('inventory')
 
 class Command(BaseCommand):
-    help = 'Runs the Autonomous AI Inventory Agent'
-
+    help = 'Runs the Simulated Inventory Agent (rule-based, not actual AI)'
+    
     def handle(self, *args, **kwargs):
-        self.stdout.write("Waking up AI Inventory Agent...")
+        self.stdout.write(self.style.WARNING('NOTE: This is a SIMULATED agent, not real AI.'))
+        self.stdout.write('For production, implement real demand forecasting with historical data.')
+        self.stdout.write("Waking up Inventory Agent...")
         
         # 1. Check Low Stock Items
         low_items = InventoryItem.objects.filter(stock__lte=models.F('reorder_level'))
         if not low_items.exists():
             self.stdout.write("No low stock detected. Agent going back to sleep.")
+            logger.info('Inventory agent: No low stock items found')
             return
 
-        # 2. Simulate AI Reasoning
+        # 2. Rule-based restocking logic (not actual AI)
         purchase_orders = []
         for inv in low_items:
             po = {
@@ -25,11 +31,11 @@ class Command(BaseCommand):
                 'current_stock': inv.stock,
                 'reorder_level': inv.reorder_level,
                 'order_qty': max(50, inv.reorder_level * 2),
-                'reason': f"Stock is critically low ({inv.stock}). Simulated weather forecast shows high demand for {inv.item.get_category_display()}s tomorrow."
+                'reason': f"Stock is critically low ({inv.stock}). Rule-based restocking triggered."
             }
             purchase_orders.append(po)
             
-            # Auto-replenish stock to simulate the supplier fulfilling the order
+            # Auto-replenish stock to simulate supplier fulfillment
             inv.stock += po['order_qty']
             inv.save()
             
@@ -37,7 +43,7 @@ class Command(BaseCommand):
         report = {
             'timestamp': timezone.now().isoformat(),
             'orders': purchase_orders,
-            'summary': f"Autonomously generated Purchase Orders for {len(purchase_orders)} items. Stock has been auto-replenished."
+            'summary': f"Simulated restocking for {len(purchase_orders)} items. Stock has been auto-replenished."
         }
         
         # 4. Save to AI Configuration

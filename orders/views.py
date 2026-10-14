@@ -3,11 +3,16 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.db import transaction
 from django.urls import reverse
+from django.views.decorators.http import require_POST
+import logging
 
 from menu.models import Item
 from .models import Order, OrderItem
 from payments.models import Payment
 from core.models import SitePayment
+from inventory.models import InventoryItem
+
+logger = logging.getLogger('orders')
 
 # NEW: for server-side QR fallback
 import qrcode
@@ -55,14 +60,42 @@ def start_order(request):
 
 @transaction.atomic
 def add_to_cart(request, item_id):
-    order = _get_cart(request)
-    if request.method == 'POST':
-        qty = int(request.POST.get('qty', '1') or '1')
-        item = get_object_or_404(Item, id=item_id, is_active=True)
-        OrderItem.objects.create(order=order, item=item, qty=qty, unit_price=item.price)
-        order.recalc_total(); order.save()
-        messages.success(request, f'Added {item.name} x{qty}')
-    return redirect('menu:today')
+    """Add item to cart with stock validation and immediate inventory deduction."""
+    try:
+        order = _get_cart(request)
+        if request.method == 'POST':
+            qty = int(request.POST.get('qty', '1') or '1')
+            
+            # Validate quantity
+            if qty < 1 or qty > 20:
+                messages.error(request, 'Quantity must be between 1 and 20.')
+                return redirect('menu:today')
+            
+            item = get_object_or_404(Item, id=item_id, is_active=True)
+            
+            # Check stock availability
+            inv = InventoryItem.objects.filter(item=item).first()
+            if inv and inv.stock < qty:
+                messages.error(request, f'Sorry, only {inv.stock} {item.name}(s) available.')
+                logger.warning(f'Insufficient stock for {item.name}: requested {qty}, available {inv.stock}')
+                return redirect('menu:today')
+            
+            # Deduct inventory immediately
+            if inv:
+                inv.stock = max(0, inv.stock - qty)
+                inv.save()
+                logger.info(f'Deducted {qty} from {item.name} stock. New stock: {inv.stock}')
+            
+            OrderItem.objects.create(order=order, item=item, qty=qty, unit_price=item.price)
+            order.recalc_total()
+            order.save()
+            logger.info(f'Added {item.name} x{qty} to order #{order.id}')
+            messages.success(request, f'Added {item.name} x{qty}')
+        return redirect('menu:today')
+    except Exception as e:
+        logger.error(f'Error adding to cart: {e}', exc_info=True)
+        messages.error(request, 'Something went wrong. Please try again.')
+        return redirect('menu:today')
 
 
 from core.models import SitePayment
@@ -150,7 +183,7 @@ def kds_api_orders(request):
     return JsonResponse({'orders': data})
 
 @staff_member_required
-@csrf_exempt # Safe enough for staff internal API, but ideally use standard CSRF
+@require_POST
 def kds_update_item(request):
     if request.method == 'POST':
         item_id = request.POST.get('item_id')
@@ -158,17 +191,13 @@ def kds_update_item(request):
         if new_status in dict(OrderItem.STATUS_CHOICES):
             oi = get_object_or_404(OrderItem, id=item_id)
             
-            # Deduct inventory ONLY if transitioning to 'ready' for the first time
+            # Inventory already deducted at order placement, so no deduction here
             if new_status == 'ready' and oi.status != 'ready':
                 oi.prepared_at = timezone.now()
-                from inventory.models import InventoryItem
-                inv = InventoryItem.objects.filter(item=oi.item).first()
-                if inv:
-                    inv.stock = max(0, inv.stock - oi.qty)
-                    inv.save()
             
             oi.status = new_status
             oi.save()
+            logger.info(f'Order item {oi.id} status updated to {new_status}')
             return JsonResponse({'ok': True})
     return JsonResponse({'ok': False}, status=400)
 

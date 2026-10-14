@@ -7,3 +7,4 @@ Pillow
 django-jazzmin
 qrcode[pil]
 requests
+python-dotenv

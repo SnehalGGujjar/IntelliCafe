@@ -1,13 +1,14 @@
 from django.db import models
+from django.core.validators import MinValueValidator
 
 class Item(models.Model):
     CATEGORY_CHOICES = [('food','Food'),('drink','Drink'),('dessert','Dessert')]
-    name = models.CharField(max_length=120)
+    name = models.CharField(max_length=120, db_index=True)
     description = models.TextField(blank=True)
-    price = models.DecimalField(max_digits=8, decimal_places=2)
+    price = models.DecimalField(max_digits=8, decimal_places=2, validators=[MinValueValidator(0)])
     image_url = models.URLField(max_length=500, blank=True, null=True, help_text="Direct URL to a real food image (e.g., from Unsplash)")
-    category = models.CharField(max_length=20, choices=CATEGORY_CHOICES, default='food')
-    is_active = models.BooleanField(default=True)
+    category = models.CharField(max_length=20, choices=CATEGORY_CHOICES, default='food', db_index=True)
+    is_active = models.BooleanField(default=True, db_index=True)
     
     @property
     def display_price(self):

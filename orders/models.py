@@ -1,14 +1,15 @@
 from django.db import models
 from django.utils import timezone
+from django.core.validators import MinValueValidator
 from menu.models import Item
 
 class Order(models.Model):
     STATUS = [('cart','Cart'),('pending','Pending Payment'),('paid','Paid'),('completed','Completed'),('cancelled','Cancelled')]
-    customer_email = models.EmailField()
-    created_at = models.DateTimeField(default=timezone.now)
-    status = models.CharField(max_length=16, choices=STATUS, default='cart')
+    customer_email = models.EmailField(db_index=True)
+    created_at = models.DateTimeField(default=timezone.now, db_index=True)
+    status = models.CharField(max_length=16, choices=STATUS, default='cart', db_index=True)
     weather_condition = models.CharField(max_length=50, null=True, blank=True, help_text="Weather condition at the time of order")
-    total = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    total = models.DecimalField(max_digits=10, decimal_places=2, default=0, validators=[MinValueValidator(0)])
     def recalc_total(self):
         total = sum([oi.subtotal() for oi in self.items.all()])
         self.total = total; return total
@@ -20,11 +21,11 @@ class OrderItem(models.Model):
         ('preparing', 'Preparing'),
         ('ready', 'Ready')
     ]
-    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='items')
+    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='items', db_index=True)
     item = models.ForeignKey(Item, on_delete=models.PROTECT)
-    qty = models.PositiveIntegerField(default=1)
-    unit_price = models.DecimalField(max_digits=8, decimal_places=2)
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    qty = models.PositiveIntegerField(default=1, validators=[MinValueValidator(1)])
+    unit_price = models.DecimalField(max_digits=8, decimal_places=2, validators=[MinValueValidator(0)])
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending', db_index=True)
     prepared_at = models.DateTimeField(null=True, blank=True)
     def subtotal(self): return self.qty * self.unit_price
     def __str__(self): return f"{self.item.name} x{self.qty} ({self.status})"

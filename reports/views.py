@@ -1,10 +1,12 @@
 import json
 from django.shortcuts import render
+from django.contrib.admin.views.decorators import staff_member_required
 from django.db.models import Sum, F, Count
 from django.db.models.functions import ExtractHour
 from orders.models import Order, OrderItem
 from core.models import AIConfiguration
 
+@staff_member_required
 def dashboard(request):
     ai_config = AIConfiguration.get_solo()
     # Base Querysets
